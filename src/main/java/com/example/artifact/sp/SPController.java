@@ -34,7 +34,7 @@ public class SPController {
         //发送ArtifactResolve
         // SOAP消息发送之后，会同步等待Response返回或者超时。
         // 当Response返回时，SAML消息便可或得到：
-        ArtifactResponse artifactResponse = buildArtifactResolves.sendAndReceiveArtifactResolve(artifactResolve, response);
+        ArtifactResponse artifactResponse = buildArtifactResolves.sendAndReceiveArtifactResolve(artifactResolve);
 
         //验证目的地址和有效期；
         buildArtifactResolves.validateDestinationAndLifetime(artifactResponse, request);

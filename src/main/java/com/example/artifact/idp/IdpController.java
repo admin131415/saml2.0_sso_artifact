@@ -8,6 +8,7 @@ import com.example.artifact.pojo.ArtifactTest;
 import com.example.artifact.sp.SPConstants;
 import com.example.artifact.sp.SPCredentials;
 import net.shibboleth.utilities.java.support.component.ComponentInitializationException;
+import net.shibboleth.utilities.java.support.httpclient.HttpClientBuilder;
 import net.shibboleth.utilities.java.support.xml.BasicParserPool;
 
 import org.opensaml.messaging.context.MessageContext;
@@ -94,9 +95,9 @@ public class IdpController {
             Assertion assertion = createAssertion.buildAssertion();
 
             assertion2 = assertion;
-            //res.sendRedirect(SPConstants.ASSERTION_CONSUMER_SERVICE + "?SAMLart=MDAwNDAwMDBjZGZiNDlmNjcwNDBkEyODQ0ZGMxNmIzNGMxMGFjODhjZW0MjEyYTM0ZjE0ZQ==");
+            res.sendRedirect(SPConstants.ASSERTION_CONSUMER_SERVICE + "?SAMLart=MDAwNDAwMDBjZGZiNDlmNjcwNDBkEyODQ0ZGMxNmIzNGMxMGFjODhjZW0MjEyYTM0ZjE0ZQ==");
 
-            res.sendRedirect(SPConstants.ASSERTION_CONSUMER_SERVICE + "?SAMLart="+ createAssertion.getArtifact());
+            //res.sendRedirect(SPConstants.ASSERTION_CONSUMER_SERVICE + "?SAMLart="+ createAssertion.getArtifact());
         }
     }
 
@@ -108,7 +109,7 @@ public class IdpController {
         HTTPSOAP11Decoder decoder = new HTTPSOAP11Decoder();
 
         decoder.setHttpServletRequest(req);
-
+        System.out.println("decoder.setHttpServletRequest(req)============="+decoder);
         try {
             BasicParserPool parserPool = new BasicParserPool();
             parserPool.initialize();
@@ -120,9 +121,14 @@ public class IdpController {
         } catch (ComponentInitializationException e) {
             throw new RuntimeException(e);
         }
+        ArtifactResponses artifactResponses = new ArtifactResponses();
+        ArtifactResolve resolve = (ArtifactResolve) decoder.getMessageContext().getMessage();
+
+        artifactResponses.verifyAssertionSignature(resolve);
+
 
         OpenSAMLUtils.logSAMLObject(decoder.getMessageContext().getMessage());
-        ArtifactResponses artifactResponses = new ArtifactResponses();
+
         ArtifactResponse artifactResponse = artifactResponses.buildArtifactResponse(assertion2);
 
         MessageContext<SAMLObject> context = new MessageContext<SAMLObject>();

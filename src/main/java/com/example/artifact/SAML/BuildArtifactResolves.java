@@ -10,6 +10,8 @@ import net.shibboleth.utilities.java.support.component.ComponentInitializationEx
 import net.shibboleth.utilities.java.support.httpclient.HttpClientBuilder;
 import org.joda.time.DateTime;
 import org.opensaml.core.xml.XMLObject;
+import org.opensaml.core.xml.config.XMLObjectProviderRegistrySupport;
+import org.opensaml.core.xml.io.MarshallingException;
 import org.opensaml.core.xml.schema.XSString;
 import org.opensaml.messaging.context.InOutOperationContext;
 import org.opensaml.messaging.context.MessageContext;
@@ -36,9 +38,11 @@ import org.opensaml.xmlsec.context.SecurityParametersContext;
 import org.opensaml.xmlsec.encryption.support.DecryptionException;
 import org.opensaml.xmlsec.encryption.support.InlineEncryptedKeyResolver;
 import org.opensaml.xmlsec.keyinfo.impl.StaticKeyInfoCredentialResolver;
+import org.opensaml.xmlsec.signature.Signature;
 import org.opensaml.xmlsec.signature.support.SignatureConstants;
 import org.opensaml.xmlsec.signature.support.SignatureException;
 import org.opensaml.xmlsec.signature.support.SignatureValidator;
+import org.opensaml.xmlsec.signature.support.Signer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,6 +60,8 @@ public class BuildArtifactResolves {
      */
     public Artifact buildArtifactFromRequest(final HttpServletRequest req) {
         Artifact artifact = OpenSAMLUtils.buildSAMLObject(Artifact.class);
+        //  artifact.setArtifact("sfwegfdfvregsdfwe");
+   //     Artifact artifact2 = Saml2::Type4Artifact.new_from_string(params['SAMLart']);
         artifact.setArtifact(req.getParameter("SAMLart"));
         return artifact;
     }
@@ -75,6 +81,26 @@ public class BuildArtifactResolves {
         artifactResolve.setDestination(IDPConstants.ARTIFACT_RESOLUTION_SERVICE);
         //   artifactResolve.setSignature(new Signature());
         artifactResolve.setArtifact(artifact);
+        //sp签名
+        Signature signature = OpenSAMLUtils.buildSAMLObject(Signature.class);
+        signature.setSigningCredential(SPCredentials.getCredential());
+        signature.setSignatureAlgorithm(SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA1);
+        signature.setCanonicalizationAlgorithm(SignatureConstants.ALGO_ID_C14N_EXCL_OMIT_COMMENTS);
+
+        artifactResolve.setSignature(signature);
+
+        try {
+            //noinspection ConstantConditions =》marshall 要求输入Nonnull且输出为Nonull；
+            XMLObjectProviderRegistrySupport.getMarshallerFactory().getMarshaller(artifactResolve).marshall(artifactResolve);
+        } catch (MarshallingException e) {
+            throw new RuntimeException(e);
+        }
+
+        try {
+            Signer.signObject(signature);
+        } catch (SignatureException e) {
+            throw new RuntimeException(e);
+        }
 
         logger.info("Sending ArtifactResolve");
         logger.info("ArtifactResolve: ");
@@ -85,7 +111,7 @@ public class BuildArtifactResolves {
     /**
      * 使用SOAP协议发送 ArtifactResolve
      */
-    public ArtifactResponse sendAndReceiveArtifactResolve(final ArtifactResolve artifactResolve, HttpServletResponse servletResponse) {
+    public ArtifactResponse sendAndReceiveArtifactResolve(final ArtifactResolve artifactResolve) {
         System.out.println("sendAndReceiveArtifactResolve");
         try {
 
@@ -99,9 +125,9 @@ public class BuildArtifactResolves {
 
             SecurityParametersContext securityParametersContext = contextout.getSubcontext(SecurityParametersContext.class, true);
             System.out.println("contextout=============="+contextout.getMessage());
-            if (securityParametersContext != null) {
+        //    if (securityParametersContext != null) {
                 securityParametersContext.setSignatureSigningParameters(signatureSigningParameters);
-            }
+        //    }
 
             //创建InOutOperationContext来处理输入输出的信息
             InOutOperationContext<ArtifactResponse, ArtifactResolve> context = new ProfileRequestContext<ArtifactResponse, ArtifactResolve>();
@@ -174,7 +200,6 @@ public class BuildArtifactResolves {
         } catch (SignatureException e) {
             e.printStackTrace();
         }
-
     }
 
 

@@ -10,6 +10,7 @@ import org.opensaml.core.xml.config.XMLObjectProviderRegistrySupport;
 import org.opensaml.core.xml.io.MarshallingException;
 import org.opensaml.saml.saml2.core.*;
 import org.opensaml.saml.saml2.encryption.Encrypter;
+import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
 import org.opensaml.xmlsec.encryption.support.DataEncryptionParameters;
 import org.opensaml.xmlsec.encryption.support.EncryptionConstants;
 import org.opensaml.xmlsec.encryption.support.EncryptionException;
@@ -17,15 +18,36 @@ import org.opensaml.xmlsec.encryption.support.KeyEncryptionParameters;
 import org.opensaml.xmlsec.signature.Signature;
 import org.opensaml.xmlsec.signature.support.SignatureConstants;
 import org.opensaml.xmlsec.signature.support.SignatureException;
+import org.opensaml.xmlsec.signature.support.SignatureValidator;
 import org.opensaml.xmlsec.signature.support.Signer;
 
 import java.io.UnsupportedEncodingException;
 
 public class ArtifactResponses {
 
+    public void verifyAssertionSignature(ArtifactResolve resolve) {
+
+        if (!resolve.isSigned()) {
+            throw new RuntimeException("The SAML ArtifactResolve was not signed");
+        }
+
+        try {
+            SAMLSignatureProfileValidator profileValidator = new SAMLSignatureProfileValidator();
+            profileValidator.validate(resolve.getSignature());
+
+            SignatureValidator.validate(resolve.getSignature(), SPCredentials.getCredential());
+
+            System.out.println("SAML ArtifactResolve signature verified");
+        } catch (SignatureException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
     public ArtifactResponse buildArtifactResponse(Assertion assertion2) throws UnsupportedEncodingException {
 
-        org.opensaml.saml.saml2.core.ArtifactResponse artifactResponse = OpenSAMLUtils.buildSAMLObject(org.opensaml.saml.saml2.core.ArtifactResponse.class);
+        ArtifactResponse artifactResponse = OpenSAMLUtils.buildSAMLObject(ArtifactResponse.class);
 
         Issuer issuer = OpenSAMLUtils.buildSAMLObject(Issuer.class);
         issuer.setValue(IDPConstants.IDP_ENTITY_ID);
